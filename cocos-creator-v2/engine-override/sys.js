@@ -47,3 +47,33 @@ sys.garbageCollect = ral.triggerGC;
 sys.restartVM = function () {
     console.error("The restartVM is not define!");
 }
+
+// 实现 safeArea 功能
+let originSafeAreaRect = sys.getSafeAreaRect;
+let safeArea = rt.getSystemInfoSync().safeArea;
+if (safeArea == null) {
+    sys.getSafeAreaRect = function () {
+        console.warn("The cc.sys.getSafeAreaRect is not support on this platform!");
+        return originSafeAreaRect(arguments);
+    }
+} else {
+    sys.getSafeAreaRect = function () {
+        let leftBottom = new cc.Vec2(safeArea.left, safeArea.bottom);
+        let rightTop = new cc.Vec2(safeArea.right, safeArea.top); // Returns the real location in view.
+
+        // 2.x 的插件中还做了其他的处理
+        let view = cc.view;
+        let screenSize = view.getFrameSize(); // Get leftBottom and rightTop point in UI coordinates
+        let relatedPos = {
+            left: 0,
+            top: 0,
+            width: screenSize.width,
+            height: screenSize.height
+        };
+        view.convertToLocationInView(leftBottom.x, leftBottom.y, relatedPos, leftBottom);
+        view.convertToLocationInView(rightTop.x, rightTop.y, relatedPos, rightTop); // convert view point to design resolution size
+        view._convertPointWithScale(leftBottom);
+        view._convertPointWithScale(rightTop);
+        return cc.rect(leftBottom.x, leftBottom.y, rightTop.x - leftBottom.x, rightTop.y - leftBottom.y);
+    }
+}
